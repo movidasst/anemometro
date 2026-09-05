@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00205b">
+<meta name="description" content="Simulador didáctico de anemómetro ocupacional para velocidad del aire, turbulencia y ventilación.">
+<title>Anemómetro Ocupacional · Movida SST+</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth-locked">
+<section class="login-gate" id="loginGate" aria-labelledby="loginTitle">
+  <div class="login-shell">
+    <div class="login-story">
+      <a class="login-brand" href="https://www.movidasst.com"><img src="logo.svg" alt="La Movida SST+"><span><strong>La Movida de SST Plus</strong><small>De la Reacción a la Prevención</small></span></a>
+      <div class="login-copy"><p class="eyebrow light">LA MOVIDA SST+ · VELOCIDAD DEL AIRE</p><h1 id="loginTitle">Anemómetro Ocupacional<br><em>MAV–PRO 600 SIM</em></h1><p>Practica medición ambiental, ventilación y exploración de ductos con una lógica didáctica basada en ISO 7726 y manuales de instrumentos profesionales.</p><div class="login-features"><span>HOT WIRE</span><span>VANE</span><span>PITOT</span></div></div>
+      <a class="back-lab" href="https://www.movidasst.com">← Volver a La Movida SST+</a>
+    </div>
+    <div class="login-card">
+      <p class="eyebrow">ACCESO DE INTEGRANTES</p><h2>Identifica tu acceso</h2><p>Ingresa con la cédula y el código de integrante de La Movida SST Plus.</p>
+      <form id="memberLogin" novalidate><label>Cédula de identidad<input id="memberId" inputmode="numeric" autocomplete="username" maxlength="20" placeholder="Solo números" required></label><label>Clave o código de integrante<div class="password-wrap"><input id="memberPassword" type="password" autocomplete="current-password" maxlength="80" required><button id="togglePassword" type="button">Mostrar</button></div></label><p class="login-message" id="loginMessage" role="status"></p><button class="login-submit" id="loginSubmit" type="submit"><span>Abrir simulador</span><b>→</b></button></form>
+      <div class="register-box"><strong>¿Aún no tienes código?</strong><a href="https://registro.movidasst.com">Registrarme ahora</a></div>
+    </div>
+  </div>
+</section>
+
+<div id="appShell" hidden aria-hidden="true">
+<header class="topbar"><a class="brand" href="https://www.movidasst.com"><img src="logo.svg" alt="La Movida SST+"><span><strong>Anemómetro Ocupacional</strong><small>MAV–PRO 600 SIM</small></span></a><div class="top-actions"><span>Hola, <b id="memberName">integrante</b></span><button id="manualBtn">Manual</button><button id="logoutBtn">Cerrar sesión</button></div></header>
+
+<main class="layout">
+<aside class="panel setup-panel">
+  <p class="eyebrow">CONFIGURACIÓN DE PRÁCTICA</p><h1>¿Qué quieres medir?</h1>
+  <div class="mode-cards" id="modeCards">
+    <button class="mode-card active" data-mode="hotwire"><b>HOT WIRE</b><span>Ambiente ocupacional · bajas velocidades</span></button>
+    <button class="mode-card" data-mode="vane"><b>VANE</b><span>Rejillas y corrientes de aire</span></button>
+    <button class="mode-card" data-mode="pitot"><b>PITOT</b><span>Ductos · presión diferencial</span></button>
+  </div>
+  <label class="field"><span>Escenario</span><select id="scenarioSelect"><option value="office">Oficina con aire acondicionado</option><option value="diffuser">Puesto bajo difusor</option><option value="window">Puesto junto a ventana</option><option value="industrial">Área industrial variable</option><option value="grille">Salida de ventilación</option><option value="duct">Ducto de ventilación</option></select></label>
+  <div class="two-cols"><label class="field"><span>Postura</span><select id="postureSelect"><option value="seated">Sentado</option><option value="standing">De pie</option></select></label><label class="field"><span>Altura</span><select id="heightSelect"></select></label></div>
+  <label class="field"><span>Orientación de la sonda</span><select id="orientationSelect"><option value="0">0° · alineada</option><option value="30">30°</option><option value="60">60°</option><option value="90">90°</option></select></label>
+  <label class="field"><span>Unidad</span><select id="unitSelect"><option value="ms">m/s</option><option value="fpm">fpm</option><option value="kmh">km/h</option></select></label>
+  <div id="flowAreaBox" class="config-box"><h3>Caudal volumétrico</h3><div class="two-cols"><label class="field"><span>Ancho (m)</span><input id="areaWidth" type="number" min="0.05" step="0.01" value="0.60"></label><label class="field"><span>Alto (m)</span><input id="areaHeight" type="number" min="0.05" step="0.01" value="0.30"></label></div><small>Q = v̄ × A</small></div>
+  <div id="pitotBox" class="config-box" hidden><h3>Ducto / Pitot</h3><label class="field"><span>Sección</span><select id="ductShape"><option value="round">Circular</option><option value="rect">Rectangular</option></select></label><div class="two-cols"><label class="field"><span>Diámetro / ancho (m)</span><input id="ductA" type="number" value="0.50" min="0.1" step="0.01"></label><label class="field"><span>Alto si rectangular (m)</span><input id="ductB" type="number" value="0.40" min="0.1" step="0.01"></label></div><label class="field"><span>Densidad del aire ρ (kg/m³)</span><input id="airDensity" type="number" value="1.20" min="0.8" max="1.5" step="0.01"></label></div>
+  <div class="guide"><div class="guide-head"><b id="guideStep">Paso 1 de 7</b><span id="guidePct">0%</span></div><div class="progress"><i id="guideBar"></i></div><h3 id="guideTitle">Selecciona el modo</h3><p id="guideText">Para velocidad ambiental baja, comienza con HOT WIRE.</p><button id="guideLocate">Muéstrame dónde</button></div>
+</aside>
+
+<section class="panel instrument-panel">
+  <div class="instrument-head"><div><p class="eyebrow">INSTRUMENTO VIRTUAL</p><h2 id="modeTitle">HOT WIRE · Hilo caliente</h2></div><span id="probeBadge">0–20 m/s · 0,01 m/s</span></div>
+  <div class="probe-stage" id="probeStage"><div class="flow-arrows"><i></i><i></i><i></i></div><div id="probeVisual" class="probe hotwire"><span class="tip"></span><span class="stem"></span><small>SONDA</small></div></div>
+  <article class="meter">
+    <div class="meter-brand"><img src="logo.svg" alt=""><span><b>MOVIDA SST+</b><small>MAV–PRO 600</small></span></div>
+    <div class="screen" id="screen"><div class="screen-top"><span id="screenMode">HOT</span><span id="screenStatus">OFF</span><span>▮▮▮</span></div><div class="main-reading"><strong id="mainReading">----</strong><span id="mainUnit">m/s</span></div><div class="screen-row"><span>AVG <b id="avgReading">----</b></span><span>MAX <b id="maxReading">----</b></span></div><div class="screen-row"><span>SD <b id="sdReading">----</b></span><span>TU <b id="tuReading">----</b></span></div><div class="screen-bottom"><span id="tempReading">22.0 °C</span><span id="timerReading">00:00</span></div></div>
+    <div class="keypad"><button id="powerBtn"><b>⏻</b><small>POWER</small></button><button id="holdBtn"><b>HOLD</b><small>RETENER</small></button><button id="modeBtn"><b>MODE</b><small>LIVE/MAX/MIN</small></button><button id="avgBtn"><b>AVG</b><small>PROMEDIO</small></button><button id="unitBtn"><b>UNIT</b><small>UNIDAD</small></button><button id="runBtn" class="run"><b>▶</b><small>START/STOP</small></button></div>
+  </article>
+  <div class="quick-stats"><div><span>MIN</span><b id="minReading">----</b></div><div><span>Muestras</span><b id="sampleCount">0</b></div><div><span>Caudal</span><b id="flowReading">----</b></div><div><span>Estado</span><b id="qualityState">Preparación</b></div></div>
+</section>
+
+<aside class="panel learning-panel">
+  <p class="eyebrow">PANEL DIDÁCTICO</p><h2>Interpreta la medición</h2>
+  <article class="lesson"><span id="lessonKicker">SELECCIÓN DE SONDA</span><h3 id="lessonTitle">No todos los anemómetros sirven igual</h3><p id="lessonText">El hilo caliente permite trabajar con velocidades bajas. La hélice es más apropiada para corrientes definidas y salidas de ventilación.</p></article>
+  <article class="quality-card"><h3>Calidad de la medición</h3><div id="qualityFlags"></div></article>
+  <article class="heights-card"><h3>Perfil vertical ISO 7726</h3><div class="person" id="personGraphic"><span class="head">Cabeza</span><span class="abd">Abdomen</span><span class="ank">Tobillos</span></div><button id="recordHeightBtn">Registrar altura actual</button><div class="height-results" id="heightResults"></div></article>
+  <article class="formula-card"><h3 id="formulaTitle">Turbulencia</h3><p id="formulaText">TU = SD / v̄ × 100</p><div id="formulaResult">—</div></article>
+</aside>
+</main>
+
+<section class="panel advanced-panel" id="advancedPanel">
+  <div class="tabs"><button class="active" data-tab="trend">Tendencia</button><button data-tab="multipoint">Multipunto</button><button data-tab="pitot">Pitot</button><button data-tab="memory">Memoria</button></div>
+  <div class="tab-pane" id="trendPane"><div class="trend-head"><div><p class="eyebrow">FLUCTUACIÓN TEMPORAL</p><h2>Velocidad del aire en el tiempo</h2></div><button id="resetTrend">Reiniciar</button></div><svg id="trendChart" viewBox="0 0 900 260" preserveAspectRatio="none"><polyline id="trendLine" points=""/></svg><p class="note">La ISO 7726 recomienda considerar las fluctuaciones de la velocidad del aire. El gráfico es simulado.</p></div>
+  <div class="tab-pane" id="multipointPane" hidden><div class="pane-grid"><div><p class="eyebrow">PROMEDIO MULTIPUNTO</p><h2>Registra varias posiciones</h2><p class="note">Añade lecturas representativas y calcula el promedio espacial. En un ambiente heterogéneo una única lectura puede no representar la exposición.</p><button class="primary" id="addPointBtn">Agregar lectura actual</button></div><div id="pointList" class="point-list"></div></div></div>
+  <div class="tab-pane" id="pitotPane" hidden><div class="pane-grid"><div><p class="eyebrow">MODO AVANZADO</p><h2>Exploración con Pitot</h2><p>Registra presión diferencial en puntos de la sección. El simulador convierte Δp en velocidad local con una relación simplificada para aire incompresible: v ≈ √(2Δp/ρ).</p><button class="primary" id="generatePitotBtn">Generar puntos</button></div><div><div id="pitotGrid" class="pitot-grid"></div><div class="pitot-summary" id="pitotSummary">Sin recorrido generado.</div></div></div></div>
+  <div class="tab-pane" id="memoryPane" hidden><div class="trend-head"><div><p class="eyebrow">MEMORIA LOCAL</p><h2>Prácticas guardadas</h2></div><button id="clearMemory">Vaciar</button></div><button class="primary" id="savePractice">Guardar práctica actual</button><div id="memoryList" class="memory-list"></div></div>
+</section>
+
+<footer>La Movida de SST Plus · De la Reacción a la Prevención · <a href="https://www.movidasst.com">www.movidasst.com</a> · Simulación didáctica</footer>
+<nav class="mobile-dock"><button data-mobile="setup">⚙<span>Configurar</span></button><button data-mobile="meter">◉<span>Equipo</span></button><button id="mobileRun" class="run">▶<span>Medir</span></button><button data-mobile="learn">✓<span>Aprender</span></button></nav>
+<div class="toast" id="toast"></div>
+<dialog id="manualDialog"><form method="dialog"><button class="close" value="close">×</button><p class="eyebrow">MANUAL DIDÁCTICO</p><h2>MAV–PRO 600 SIM</h2><details open><summary>1. Selección de sonda</summary><p><b>HOT WIRE:</b> bajas velocidades y ambiente ocupacional. <b>VANE:</b> corrientes definidas y salidas de ventilación. <b>PITOT:</b> exploración avanzada de ductos.</p></details><details><summary>2. Secuencia de medición</summary><p>Selecciona escenario y altura, enciende, espera el calentamiento de la sonda térmica cuando corresponda, orienta la sonda, inicia la medición y deja acumular suficientes muestras antes de interpretar promedio, SD y TU.</p></details><details><summary>3. Promedio y turbulencia</summary><p>La velocidad media se calcula durante el período de medición. SD representa la dispersión temporal. TU se expresa como SD/v̄ × 100.</p></details><details><summary>4. Perfil vertical</summary><p>Para persona sentada: 1,1 m cabeza, 0,6 m abdomen y 0,1 m tobillos. Para persona de pie: 1,7 m, 1,1 m y 0,1 m.</p></details><details><summary>5. Caudal</summary><p>Con hilo caliente o hélice, el modo didáctico usa Q = v̄ × A. El área debe corresponder a la sección real atravesada por el flujo.</p></details><details><summary>6. Pitot</summary><p>La ISO 3966 describe un método de velocidad-área con múltiples puntos. Este simulador usa una versión didáctica y no sustituye la aplicación completa de la norma ni la evaluación de incertidumbre.</p></details><button class="primary" value="close">Volver</button></form></dialog>
+</div>
+<script src="auth.js"></script><script src="app.js"></script>
+</body></html>

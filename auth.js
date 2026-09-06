@@ -12,26 +12,6 @@
   const REQUEST_TIMEOUT = 15000;
   let accessTimer = null;
 
-  function installAuthUiFixes() {
-    if (document.getElementById('authRuntimeFixes')) return;
-    const style = document.createElement('style');
-    style.id = 'authRuntimeFixes';
-    style.textContent = `
-      body.auth-locked{overflow-y:auto!important;overflow-x:hidden!important}
-      body.auth-locked .login-gate{min-height:100dvh;overflow:visible}
-      body.auth-locked .login-card{position:relative;z-index:2}
-      body.auth-locked .login-card input,
-      body.auth-locked .login-card button{pointer-events:auto!important;touch-action:manipulation}
-      @media(max-width:780px){
-        body.auth-locked{padding-bottom:0!important}
-        body.auth-locked .login-shell{min-height:100dvh;height:auto!important;overflow:visible!important}
-        body.auth-locked .login-story{min-height:300px}
-        body.auth-locked .login-card{align-self:stretch;padding-bottom:max(34px,env(safe-area-inset-bottom))}
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
   function readStoredJson(storage, key, fallback) {
     try { return JSON.parse(storage.getItem(key) || 'null') || fallback; }
     catch { return fallback; }
@@ -77,34 +57,57 @@
 
   function scheduleExpiry(expiresAt) {
     clearTimeout(accessTimer);
-    accessTimer = setTimeout(() => closeSession(true), Math.max(0, expiresAt - Date.now()));
+    accessTimer = setTimeout(() => showLogin('Tu sesión de 20 minutos finalizó. Ingresa nuevamente para continuar.'), Math.max(0, expiresAt - Date.now()));
+  }
+
+  function showLogin(message = '') {
+    clearTimeout(accessTimer);
+    sessionStorage.removeItem(ACCESS_SESSION_KEY);
+
+    const gate = $('loginGate');
+    const app = $('appShell');
+    if (!gate || !app) return;
+
+    app.hidden = true;
+    app.setAttribute('aria-hidden', 'true');
+    gate.hidden = false;
+    gate.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('auth-locked');
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    const form = $('memberLogin');
+    if (form) form.reset();
+    const password = $('memberPassword');
+    const toggle = $('togglePassword');
+    if (password) password.type = 'password';
+    if (toggle) {
+      toggle.textContent = 'Mostrar';
+      toggle.setAttribute('aria-pressed', 'false');
+    }
+    setMessage(message, message && message.includes('correct') ? 'success' : 'error');
+    window.setTimeout(() => $('memberId')?.focus({ preventScroll: true }), 80);
   }
 
   function openSimulator(member, persist = true) {
+    const gate = $('loginGate');
+    const app = $('appShell');
     const memberName = $('memberName');
-    const loginGate = $('loginGate');
-    const appShell = $('appShell');
-    if (!memberName || !loginGate || !appShell) return;
+    if (!gate || !app || !memberName) return;
 
     const name = [member?.nombres, member?.apellidos].filter(Boolean).join(' ').trim() || member?.nombre || member?.name || 'integrante';
     const expiresAt = member?.expiresAt || Date.now() + ACCESS_DURATION;
     if (persist) writeStoredJson(sessionStorage, ACCESS_SESSION_KEY, { name, expiresAt });
 
     memberName.textContent = name;
-    loginGate.hidden = true;
-    appShell.hidden = false;
-    appShell.setAttribute('aria-hidden', 'false');
+    gate.hidden = true;
+    gate.setAttribute('aria-hidden', 'true');
+    app.hidden = false;
+    app.setAttribute('aria-hidden', 'false');
     document.body.classList.remove('auth-locked');
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
     scheduleExpiry(expiresAt);
-  }
-
-  function closeSession(expired = false) {
-    clearTimeout(accessTimer);
-    sessionStorage.removeItem(ACCESS_SESSION_KEY);
-    if (expired) sessionStorage.setItem('movida-sst-anemometro-expired', '1');
-    window.location.reload();
   }
 
   async function requestMember(cedula, codigo) {
@@ -125,11 +128,7 @@
         },
         body: JSON.stringify({ p_cedula: cedula, p_codigo: codigo })
       });
-      if (!response.ok) {
-        let details = '';
-        try { details = await response.text(); } catch {}
-        throw new Error(`Access service returned ${response.status}${details ? `: ${details.slice(0, 160)}` : ''}`);
-      }
+      if (!response.ok) throw new Error(`Access service returned ${response.status}`);
       const payload = await response.json();
       return Array.isArray(payload) ? (payload[0] || null) : (payload || null);
     } finally {
@@ -160,10 +159,10 @@
       return;
     }
 
-    const buttonText = submit.querySelector('span');
+    const label = submit.querySelector('span');
     submit.disabled = true;
-    if (buttonText) buttonText.textContent = 'Verificando acceso…';
-    setMessage('Conectando con el registro de integrantes…', 'success');
+    if (label) label.textContent = 'Verificando acceso…';
+    setMessage('Validando con el registro de integrantes…', 'success');
 
     try {
       const member = await requestMember(cedula, codigo);
@@ -177,31 +176,24 @@
       localStorage.removeItem(ACCESS_ATTEMPTS_KEY);
       cedulaInput.removeAttribute('aria-invalid');
       passwordInput.removeAttribute('aria-invalid');
-      $('memberLogin')?.reset();
       setMessage('Acceso correcto. Abriendo simulador…', 'success');
-      openSimulator(member);
+      window.setTimeout(() => openSimulator(member), 180);
     } catch (error) {
       console.error('No fue posible validar el acceso', error);
-      if (error?.name === 'AbortError') {
-        setMessage('La validación tardó demasiado. Revisa tu conexión e intenta nuevamente.');
-      } else {
-        setMessage('No fue posible conectar con el servicio de acceso. Intenta nuevamente.');
-      }
+      if (error?.name === 'AbortError') setMessage('La validación tardó demasiado. Revisa tu conexión e intenta nuevamente.');
+      else setMessage('No fue posible conectar con el servicio de acceso. Intenta nuevamente.');
     } finally {
       submit.disabled = false;
-      if (buttonText) buttonText.textContent = 'Abrir simulador';
+      if (label) label.textContent = 'Abrir simulador';
     }
   }
 
   function init() {
-    installAuthUiFixes();
-
     const form = $('memberLogin');
     const toggle = $('togglePassword');
     const logout = $('logoutBtn');
-    const memberId = $('memberId');
-    if (!form || !toggle || !logout || !memberId) {
-      console.error('No se encontraron todos los controles de acceso del simulador.');
+    if (!form || !toggle || !logout) {
+      console.error('No se encontraron todos los controles de acceso.');
       return;
     }
 
@@ -214,7 +206,7 @@
       toggle.textContent = show ? 'Ocultar' : 'Mostrar';
       toggle.setAttribute('aria-pressed', String(show));
     });
-    logout.addEventListener('click', () => closeSession(false));
+    logout.addEventListener('click', () => showLogin('Sesión cerrada correctamente.'));
 
     const session = readStoredJson(sessionStorage, ACCESS_SESSION_KEY, null);
     if (session?.expiresAt > Date.now()) {
@@ -222,14 +214,9 @@
       return;
     }
 
-    sessionStorage.removeItem(ACCESS_SESSION_KEY);
+    showLogin();
     const attempts = getAttemptState();
-    const expired = sessionStorage.getItem('movida-sst-anemometro-expired') === '1';
-    sessionStorage.removeItem('movida-sst-anemometro-expired');
-    if (expired) setMessage('Tu sesión de 20 minutos finalizó. Ingresa nuevamente para continuar.');
-    else if (attempts.blockedUntil > Date.now()) setMessage(blockedMessage(attempts.blockedUntil));
-
-    window.setTimeout(() => memberId.focus({ preventScroll: true }), 50);
+    if (attempts.blockedUntil > Date.now()) setMessage(blockedMessage(attempts.blockedUntil));
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

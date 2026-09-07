@@ -21,7 +21,6 @@ jobs:
       - name: Cambiar solo referencias del logo
         run: |
           python - <<'PY'
-          from pathlib import import_module
           from pathlib import Path
           replacements = {
             'assets/logo-movida-sst-plus.svg':'assets/logo-movida-sst-plus.png',
